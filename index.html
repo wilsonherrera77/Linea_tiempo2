@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Línea de Tiempo Analítica v6 | Derechos Pueblos Indígenas en Colombia</title>
+    <title>Línea de Tiempo Analítica v7 | Derechos Pueblos Indígenas en Colombia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- NUEVO: Librería para gráficos dinámicos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -87,10 +89,9 @@
 
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
-            <!-- NUEVO: Imagen personalizable en la cabecera -->
             <img src="https://www.onic.org.co/images/logo-onic-2021.png" alt="Logo ONIC" class="h-24 mx-auto mb-4" onerror="this.style.display='none'">
             <h1 class="text-3xl md:text-5xl font-bold text-slate-900">Análisis Interseccional sobre Derechos Indígenas</h1>
-            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v6.0</p>
+            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v7.0</p>
         </header>
 
         <!-- Contenedor de Controles -->
@@ -101,7 +102,6 @@
                     <input type="search" id="search-input" placeholder="Buscar por palabra clave..." class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     
                     <div>
-                        <!-- NUEVO: Botones para seleccionar/deseleccionar todos los Ejes Temáticos -->
                         <div class="flex justify-between items-center mb-2">
                             <h4 class="font-semibold text-slate-700">Filtrar por Eje Temático:</h4>
                             <div class="flex space-x-2">
@@ -110,12 +110,10 @@
                             </div>
                         </div>
                         <div id="theme-filters" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                            <!-- Theme filters will be inserted here dynamically -->
                         </div>
                     </div>
 
                     <div>
-                        <!-- NUEVO: Botones para seleccionar/deseleccionar todos los Tipos de Evento -->
                         <div class="flex justify-between items-center mb-2">
                             <h4 class="font-semibold text-slate-700">Filtrar por Tipo de Evento:</h4>
                              <div class="flex space-x-2">
@@ -124,7 +122,6 @@
                             </div>
                         </div>
                         <div id="type-filters" class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                            <!-- Type filters will be inserted here dynamically -->
                         </div>
                     </div>
                     
@@ -137,10 +134,12 @@
                     </div>
                 </div>
             </div>
-            <div id="analytics-container" class="bg-white p-6 rounded-xl shadow-md">
+            <div id="analytics-container" class="bg-white p-6 rounded-xl shadow-md flex flex-col">
                  <h3 class="text-xl font-bold text-slate-800 mb-4">Resumen Analítico</h3>
-                 <div id="analytics-content" class="text-sm space-y-4">
-                     <!-- Analytics content will be inserted here -->
+                 <p id="analytics-summary-text" class="text-sm font-semibold text-slate-900 mb-2"></p>
+                 <!-- NUEVO: Canvas para el gráfico -->
+                 <div class="relative flex-grow h-64">
+                    <canvas id="analytics-chart"></canvas>
                  </div>
             </div>
         </div>
@@ -151,7 +150,6 @@
                 <svg id="connections-svg"></svg>
                 <div class="relative timeline-container">
                     <div id="timeline">
-                        <!-- Timeline events will be inserted here -->
                     </div>
                 </div>
             </div>
@@ -211,7 +209,8 @@
             const searchInput = document.getElementById('search-input');
             const connectionsToggle = document.getElementById('toggle-connections');
             const connectionsSvg = document.getElementById('connections-svg');
-            const analyticsContent = document.getElementById('analytics-content');
+            const analyticsSummaryText = document.getElementById('analytics-summary-text');
+            const chartCanvas = document.getElementById('analytics-chart');
             
             const detailsTheme = document.getElementById('details-theme');
             const detailsType = document.getElementById('details-type');
@@ -230,7 +229,8 @@
             let activeTypeFilters = [];
             let currentSearchTerm = '';
             let selectedEventId = null;
-            let themeColorMap = {}; // Will be populated dynamically
+            let themeColorMap = {};
+            let analyticsChart = null; // Variable to hold the chart instance
 
             // --- Data Loading ---
             function loadDataAndInitialize() {
@@ -246,10 +246,9 @@
                             }));
                             allEvents.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
                             
-                            // Dynamically build the theme color map
                             allEvents.forEach(event => {
                                 if (event.temaPrincipal && !themeColorMap[event.temaPrincipal]) {
-                                    themeColorMap[event.temaPrincipal] = event.color || '#94a3b8'; // Use color from CSV or a default gray
+                                    themeColorMap[event.temaPrincipal] = event.color || '#94a3b8';
                                 }
                             });
 
@@ -330,7 +329,7 @@
                     }
                 });
 
-                // NUEVO: Event listeners para los botones de seleccionar/deseleccionar
+                // CORREGIDO: Event listeners para los botones de seleccionar/deseleccionar
                 document.getElementById('select-all-themes').addEventListener('click', () => {
                     document.querySelectorAll('.theme-filter-checkbox').forEach(cb => cb.checked = true);
                     activeThemeFilters = Object.keys(themeColorMap);
@@ -373,48 +372,58 @@
 
             function updateAnalytics(filteredEvents) {
                 const total = filteredEvents.length;
+                analyticsSummaryText.textContent = `Mostrando ${total} de ${allEvents.length} eventos.`;
+                
                 const themeCounts = {};
-                Object.keys(themeColorMap).forEach(theme => themeCounts[theme] = 0);
-
-                const typeCounts = {};
-                [...new Set(allEvents.map(event => event.tipo_evento))].forEach(type => typeCounts[type] = 0);
+                activeThemeFilters.forEach(theme => themeCounts[theme] = 0);
 
                 filteredEvents.forEach(event => {
                     if (themeCounts.hasOwnProperty(event.temaPrincipal)) {
                         themeCounts[event.temaPrincipal]++;
                     }
-                    if (typeCounts.hasOwnProperty(event.tipo_evento)) {
-                        typeCounts[event.tipo_evento]++;
+                });
+                
+                renderAnalyticsChart(themeCounts);
+            }
+
+            // NUEVO: Función para renderizar el gráfico dinámico
+            function renderAnalyticsChart(data) {
+                if (analyticsChart) {
+                    analyticsChart.destroy(); // Destruir el gráfico anterior para evitar sobreposiciones
+                }
+                
+                const labels = Object.keys(data);
+                const chartData = Object.values(data);
+                const backgroundColors = labels.map(label => themeColorMap[label]);
+
+                analyticsChart = new Chart(chartCanvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Eventos por Eje Temático',
+                            data: chartData,
+                            backgroundColor: backgroundColors,
+                            borderColor: '#ffffff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
-
-                let analyticsHtml = `<p class="font-semibold text-slate-900">Mostrando ${total} de ${allEvents.length} eventos.</p>`;
-                
-                analyticsHtml += '<h4 class="font-semibold text-slate-700 mt-4 mb-2">Desglose por Eje Temático:</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
-                for (const theme in themeCounts) {
-                    if (activeThemeFilters.includes(theme)) {
-                        analyticsHtml += `
-                            <div class="flex items-center justify-between p-2 bg-slate-50 rounded">
-                                <div class="flex items-center"><span class="w-3 h-3 inline-block mr-2 rounded-sm" style="background-color: ${themeColorMap[theme]}"></span><span class="text-slate-700">${theme}</span></div>
-                                <span class="font-bold text-slate-800">${themeCounts[theme]}</span>
-                            </div>`;
-                    }
-                }
-                analyticsHtml += '</div>';
-
-                analyticsHtml += '<h4 class="font-semibold text-slate-700 mt-4 mb-2">Desglose por Tipo de Evento:</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-2">';
-                 for (const type in typeCounts) {
-                    if (activeTypeFilters.includes(type) && typeCounts[type] > 0) {
-                        analyticsHtml += `
-                            <div class="flex items-center justify-between p-2 bg-slate-50 rounded">
-                                <span class="text-slate-700">${type}</span>
-                                <span class="font-bold text-slate-800">${typeCounts[type]}</span>
-                            </div>`;
-                    }
-                }
-                analyticsHtml += '</div>';
-
-                analyticsContent.innerHTML = analyticsHtml;
             }
 
             function renderTimeline(eventsToRender) {
@@ -531,13 +540,12 @@
                 detailsActors.innerHTML = `<span class="font-semibold">Actores/Entidad:</span> ${item.actoresClave} <br> <span class="font-semibold">Ámbito:</span> ${item.ambito}`;
                 detailsSource.textContent = item.fuente;
                 
-                // Handle Drive Link
-                detailsDriveLinkContainer.innerHTML = ''; // Clear previous link
+                detailsDriveLinkContainer.innerHTML = '';
                 if (item.driveLink) {
                     const linkElement = document.createElement('a');
                     linkElement.href = item.driveLink;
                     linkElement.textContent = 'Descargar Documento';
-                    linkElement.target = '_blank'; // Open in new tab
+                    linkElement.target = '_blank';
                     linkElement.rel = 'noopener noreferrer';
                     linkElement.className = 'inline-block bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors';
                     detailsDriveLinkContainer.appendChild(linkElement);
