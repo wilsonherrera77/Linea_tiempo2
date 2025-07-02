@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Línea de Tiempo Analítica v5 (Dinámica) | Derechos Pueblos Indígenas en Colombia</title>
+    <title>Línea de Tiempo Analítica v6 | Derechos Pueblos Indígenas en Colombia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -87,8 +87,10 @@
 
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
+            <!-- NUEVO: Imagen personalizable en la cabecera -->
+            <img src="https://www.onic.org.co/images/logo-onic-2021.png" alt="Logo ONIC" class="h-24 mx-auto mb-4" onerror="this.style.display='none'">
             <h1 class="text-3xl md:text-5xl font-bold text-slate-900">Análisis Interseccional sobre Derechos Indígenas</h1>
-            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v5.0</p>
+            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v6.0</p>
         </header>
 
         <!-- Contenedor de Controles -->
@@ -99,14 +101,28 @@
                     <input type="search" id="search-input" placeholder="Buscar por palabra clave..." class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     
                     <div>
-                        <h4 class="font-semibold text-slate-700 mb-2">Filtrar por Eje Temático:</h4>
+                        <!-- NUEVO: Botones para seleccionar/deseleccionar todos los Ejes Temáticos -->
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-semibold text-slate-700">Filtrar por Eje Temático:</h4>
+                            <div class="flex space-x-2">
+                                <button id="select-all-themes" class="text-xs text-blue-600 hover:underline">Todos</button>
+                                <button id="deselect-all-themes" class="text-xs text-blue-600 hover:underline">Ninguno</button>
+                            </div>
+                        </div>
                         <div id="theme-filters" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                             <!-- Theme filters will be inserted here dynamically -->
                         </div>
                     </div>
 
                     <div>
-                        <h4 class="font-semibold text-slate-700 mb-2">Filtrar por Tipo de Evento:</h4>
+                        <!-- NUEVO: Botones para seleccionar/deseleccionar todos los Tipos de Evento -->
+                        <div class="flex justify-between items-center mb-2">
+                            <h4 class="font-semibold text-slate-700">Filtrar por Tipo de Evento:</h4>
+                             <div class="flex space-x-2">
+                                <button id="select-all-types" class="text-xs text-blue-600 hover:underline">Todos</button>
+                                <button id="deselect-all-types" class="text-xs text-blue-600 hover:underline">Ninguno</button>
+                            </div>
+                        </div>
                         <div id="type-filters" class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
                             <!-- Type filters will be inserted here dynamically -->
                         </div>
@@ -287,7 +303,6 @@
 
             // --- Event Handling ---
             function addEventListeners() {
-                // Use event delegation for dynamically created checkboxes
                 themeFiltersContainer.addEventListener('change', (e) => {
                     if (e.target.classList.contains('theme-filter-checkbox')) {
                         activeThemeFilters = [...document.querySelectorAll('.theme-filter-checkbox:checked')].map(cb => cb.value);
@@ -313,6 +328,31 @@
                     } else {
                         connectionsSvg.innerHTML = '';
                     }
+                });
+
+                // NUEVO: Event listeners para los botones de seleccionar/deseleccionar
+                document.getElementById('select-all-themes').addEventListener('click', () => {
+                    document.querySelectorAll('.theme-filter-checkbox').forEach(cb => cb.checked = true);
+                    activeThemeFilters = Object.keys(themeColorMap);
+                    filterAndRender();
+                });
+
+                document.getElementById('deselect-all-themes').addEventListener('click', () => {
+                    document.querySelectorAll('.theme-filter-checkbox').forEach(cb => cb.checked = false);
+                    activeThemeFilters = [];
+                    filterAndRender();
+                });
+
+                document.getElementById('select-all-types').addEventListener('click', () => {
+                    document.querySelectorAll('.type-filter-checkbox').forEach(cb => cb.checked = true);
+                    activeTypeFilters = [...new Set(allEvents.map(event => event.tipo_evento))];
+                    filterAndRender();
+                });
+
+                document.getElementById('deselect-all-types').addEventListener('click', () => {
+                    document.querySelectorAll('.type-filter-checkbox').forEach(cb => cb.checked = false);
+                    activeTypeFilters = [];
+                    filterAndRender();
                 });
             }
 
