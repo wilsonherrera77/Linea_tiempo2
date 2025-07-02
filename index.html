@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Línea de Tiempo Analítica v4 | Derechos Pueblos Indígenas en Colombia</title>
+    <title>Línea de Tiempo Analítica v5 (Dinámica) | Derechos Pueblos Indígenas en Colombia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -39,7 +39,7 @@
             height: 20px;
             border-radius: 50%;
             background: white;
-            border: 4px solid var(--timeline-color, #3b82f6);
+            border: 4px solid var(--timeline-color, #94a3b8); /* Color gris por defecto */
             z-index: 3;
             transition: transform 0.2s ease-in-out;
         }
@@ -88,7 +88,7 @@
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-5xl font-bold text-slate-900">Análisis Interseccional sobre Derechos Indígenas</h1>
-            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v4.0</p>
+            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v5.0</p>
         </header>
 
         <!-- Contenedor de Controles -->
@@ -101,14 +101,14 @@
                     <div>
                         <h4 class="font-semibold text-slate-700 mb-2">Filtrar por Eje Temático:</h4>
                         <div id="theme-filters" class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                            <!-- Theme filters will be inserted here -->
+                            <!-- Theme filters will be inserted here dynamically -->
                         </div>
                     </div>
 
                     <div>
                         <h4 class="font-semibold text-slate-700 mb-2">Filtrar por Tipo de Evento:</h4>
                         <div id="type-filters" class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 text-sm">
-                            <!-- Type filters will be inserted here -->
+                            <!-- Type filters will be inserted here dynamically -->
                         </div>
                     </div>
                     
@@ -214,14 +214,7 @@
             let activeTypeFilters = [];
             let currentSearchTerm = '';
             let selectedEventId = null;
-
-            const themeColors = {
-                "Territorio y Ambiente": "#10B981",
-                "Salud y Medicina Tradicional": "#3B82F6",
-                "Derechos Humanos y Paz": "#EF4444",
-                "Educación y Conocimiento Indígena": "#F59E0B",
-                "Gobernabilidad y Autonomía": "#1F2937",
-            };
+            let themeColorMap = {}; // Will be populated dynamically
 
             // --- Data Loading ---
             function loadDataAndInitialize() {
@@ -231,14 +224,19 @@
                     skipEmptyLines: true,
                     complete: function(results) {
                         try {
-                            // Process the parsed data
                             allEvents = results.data.map(event => ({
                                 ...event,
                                 conexiones: event.conexiones ? event.conexiones.split(';').filter(id => id) : []
                             }));
                             allEvents.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
                             
-                            // Initialize the application
+                            // Dynamically build the theme color map
+                            allEvents.forEach(event => {
+                                if (event.temaPrincipal && !themeColorMap[event.temaPrincipal]) {
+                                    themeColorMap[event.temaPrincipal] = event.color || '#94a3b8'; // Use color from CSV or a default gray
+                                }
+                            });
+
                             setupThemeFilters();
                             setupTypeFilters();
                             addEventListeners();
@@ -261,14 +259,14 @@
 
             // --- UI Setup ---
             function setupThemeFilters() {
-                const themes = Object.keys(themeColors);
+                const themes = Object.keys(themeColorMap).sort();
                 activeThemeFilters = [...themes]; 
 
                 themeFiltersContainer.innerHTML = themes.map(theme => `
                     <div class="flex items-center">
                         <input type="checkbox" id="filter-theme-${theme.replace(/\s+/g, '-')}" value="${theme}" class="theme-filter-checkbox filter-checkbox hidden" checked>
                         <label for="filter-theme-${theme.replace(/\s+/g, '-')}" class="flex items-center cursor-pointer">
-                            <span class="w-4 h-4 inline-block mr-2 rounded-sm" style="background-color: ${themeColors[theme]}"></span>
+                            <span class="w-4 h-4 inline-block mr-2 rounded-sm" style="background-color: ${themeColorMap[theme]}"></span>
                             ${theme}
                         </label>
                     </div>
@@ -289,18 +287,19 @@
 
             // --- Event Handling ---
             function addEventListeners() {
-                document.querySelectorAll('.theme-filter-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', () => {
+                // Use event delegation for dynamically created checkboxes
+                themeFiltersContainer.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('theme-filter-checkbox')) {
                         activeThemeFilters = [...document.querySelectorAll('.theme-filter-checkbox:checked')].map(cb => cb.value);
                         filterAndRender();
-                    });
+                    }
                 });
 
-                document.querySelectorAll('.type-filter-checkbox').forEach(checkbox => {
-                    checkbox.addEventListener('change', () => {
+                typeFiltersContainer.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('type-filter-checkbox')) {
                         activeTypeFilters = [...document.querySelectorAll('.type-filter-checkbox:checked')].map(cb => cb.value);
                         filterAndRender();
-                    });
+                    }
                 });
 
                 searchInput.addEventListener('input', (e) => {
@@ -335,7 +334,7 @@
             function updateAnalytics(filteredEvents) {
                 const total = filteredEvents.length;
                 const themeCounts = {};
-                Object.keys(themeColors).forEach(theme => themeCounts[theme] = 0);
+                Object.keys(themeColorMap).forEach(theme => themeCounts[theme] = 0);
 
                 const typeCounts = {};
                 [...new Set(allEvents.map(event => event.tipo_evento))].forEach(type => typeCounts[type] = 0);
@@ -356,7 +355,7 @@
                     if (activeThemeFilters.includes(theme)) {
                         analyticsHtml += `
                             <div class="flex items-center justify-between p-2 bg-slate-50 rounded">
-                                <div class="flex items-center"><span class="w-3 h-3 inline-block mr-2 rounded-sm" style="background-color: ${themeColors[theme]}"></span><span class="text-slate-700">${theme}</span></div>
+                                <div class="flex items-center"><span class="w-3 h-3 inline-block mr-2 rounded-sm" style="background-color: ${themeColorMap[theme]}"></span><span class="text-slate-700">${theme}</span></div>
                                 <span class="font-bold text-slate-800">${themeCounts[theme]}</span>
                             </div>`;
                     }
@@ -398,7 +397,7 @@
                     
                     const cardHtml = `
                         ${yearHtml}
-                        <div class="timeline-item" style="--timeline-color: ${item.color};">
+                        <div class="timeline-item" style="--timeline-color: ${item.color || '#94a3b8'};">
                             <div id="event-${item.id}" class="timeline-card bg-white p-4 rounded-lg shadow-md hover:shadow-xl">
                                 <p class="font-semibold text-md text-slate-800">${item.titulo}</p>
                                 <span class="text-sm text-slate-500">${eventDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}</span>
@@ -437,8 +436,8 @@
                 const selectedCard = document.getElementById(`event-${eventId}`);
                 if (selectedCard) {
                     selectedCard.classList.add('selected');
-                    selectedCard.style.borderColor = item.color;
-                    selectedCard.style.setProperty('--shadow-color', `${item.color}33`);
+                    selectedCard.style.borderColor = item.color || '#94a3b8';
+                    selectedCard.style.setProperty('--shadow-color', `${item.color || '#94a3b8'}33`);
                 }
             }
 
@@ -468,7 +467,7 @@
                         line.setAttribute('x2', '20');
                         line.setAttribute('y2', y2);
                         line.setAttribute('class', 'connection-line highlighted');
-                        line.style.stroke = originEvent.color;
+                        line.style.stroke = originEvent.color || '#94a3b8';
                         connectionsSvg.appendChild(line);
                     }
                 });
@@ -482,7 +481,7 @@
                 placeholder.classList.add('hidden');
                 
                 detailsTheme.textContent = item.temaPrincipal;
-                detailsTheme.style.backgroundColor = item.color;
+                detailsTheme.style.backgroundColor = item.color || '#94a3b8';
                 detailsType.textContent = item.tipo_evento;
                 detailsSubtheme.textContent = item.subtema;
                 detailsTitle.textContent = item.titulo;
@@ -510,7 +509,7 @@
                         const connectedEvent = allEvents.find(e => e.id === connId);
                         if (connectedEvent) {
                             return `<a href="#" onclick="window.showDetails('${connId}'); return false;" class="flex items-center text-blue-600 hover:underline mb-1">
-                                <span class="w-3 h-3 inline-block mr-2 rounded-sm flex-shrink-0" style="background-color: ${connectedEvent.color}"></span>
+                                <span class="w-3 h-3 inline-block mr-2 rounded-sm flex-shrink-0" style="background-color: ${connectedEvent.color || '#94a3b8'}"></span>
                                 <span>${connectedEvent.titulo}</span>
                             </a>`;
                         }
