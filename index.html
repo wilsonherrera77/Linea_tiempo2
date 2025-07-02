@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Línea de Tiempo Analítica v3 | Derechos Pueblos Indígenas en Colombia</title>
+    <title>Línea de Tiempo Analítica v4 | Derechos Pueblos Indígenas en Colombia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
@@ -88,7 +88,7 @@
     <div class="container mx-auto p-4 md:p-8">
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-5xl font-bold text-slate-900">Análisis Interseccional sobre Derechos Indígenas</h1>
-            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2025) - v3.0</p>
+            <p class="text-lg md:text-xl text-slate-600 mt-2">Línea de tiempo multitemática (1991 - 2030) - v4.0</p>
         </header>
 
         <!-- Contenedor de Controles -->
@@ -168,8 +168,9 @@
                                 <p id="details-actors" class="text-slate-600"></p>
                             </div>
                              <div>
-                                <h3 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-3">Fuente </h3>
-                                <p id="details-source" class="text-slate-600 text-sm italic"></p>
+                                <h3 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-3">Fuente y Documento</h3>
+                                <p id="details-source" class="text-slate-600 text-sm italic mb-3"></p>
+                                <div id="details-drive-link"></div>
                             </div>
                             <div>
                                 <h3 class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-2 mb-3">Conexiones</h3>
@@ -204,6 +205,7 @@
             const detailsDescription = document.getElementById('details-description');
             const detailsActors = document.getElementById('details-actors');
             const detailsSource = document.getElementById('details-source');
+            const detailsDriveLinkContainer = document.getElementById('details-drive-link');
             const detailsConnections = document.getElementById('details-connections');
 
             // --- State Variables ---
@@ -232,7 +234,6 @@
                             // Process the parsed data
                             allEvents = results.data.map(event => ({
                                 ...event,
-                                // Split connections string into an array, handle empty string
                                 conexiones: event.conexiones ? event.conexiones.split(';').filter(id => id) : []
                             }));
                             allEvents.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
@@ -491,6 +492,18 @@
                 detailsActors.innerHTML = `<span class="font-semibold">Actores/Entidad:</span> ${item.actoresClave} <br> <span class="font-semibold">Ámbito:</span> ${item.ambito}`;
                 detailsSource.textContent = item.fuente;
                 
+                // Handle Drive Link
+                detailsDriveLinkContainer.innerHTML = ''; // Clear previous link
+                if (item.driveLink) {
+                    const linkElement = document.createElement('a');
+                    linkElement.href = item.driveLink;
+                    linkElement.textContent = 'Descargar Documento';
+                    linkElement.target = '_blank'; // Open in new tab
+                    linkElement.rel = 'noopener noreferrer';
+                    linkElement.className = 'inline-block bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors';
+                    detailsDriveLinkContainer.appendChild(linkElement);
+                }
+
                 let connectionsHtml = 'No hay conexiones explícitas registradas.';
                 if (item.conexiones && item.conexiones.length > 0) {
                     const connectionLinks = item.conexiones.map(connId => {
